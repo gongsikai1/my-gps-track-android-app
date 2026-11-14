@@ -1,0 +1,86 @@
+plugins {
+    id 'com.android.application'
+}
+
+// 签名信息与高德 Key 都不进仓库：
+//   keystore.properties -> 签名配置（可选，没有就出未签名包）
+//   local.properties    -> sdk.dir 与本机的高德 Key（amap.key）；也可用环境变量 AMAP_KEY
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
+def localPropsFile = rootProject.file('local.properties')
+def localProps = new Properties()
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+def amapKey = localProps.getProperty('amap.key')
+if (!amapKey) amapKey = System.getenv('AMAP_KEY')
+if (!amapKey) amapKey = 'YOUR_AMAP_KEY'
+
+android {
+    namespace 'com.track.recorder'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.track.recorder"
+        minSdk 26
+        targetSdk 34
+        versionCode 2
+        versionName "2.0"
+
+        // 高德 Key 注入到 AndroidManifest 的 com.amap.api.v2.apikey
+        resValue "string", "amap_key", amapKey
+    }
+
+    signingConfigs {
+        if (keystorePropsFile.exists()) {
+            release {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (keystorePropsFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            if (keystorePropsFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    packagingOptions {
+        // 高德 SDK 的 so 需要按传统方式解压安装，否则 MapView 起不来
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    // 高德 3D 地图 SDK 10.0.600：先跑 scripts/fetch_amap_sdk.sh 生成
+    //   app/libs/3dmap.jar（仅 class）+ app/src/main/jniLibs/**/*.so + app/src/main/assets/map_assets/**
+    implementation files('libs/3dmap.jar')
+}

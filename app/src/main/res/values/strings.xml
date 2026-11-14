@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">轨迹记录</string>
+    <!-- amap_key 由 app/build.gradle 的 resValue 注入（见 local.properties 的 amap.key / 环境变量 AMAP_KEY） -->
+</resources>
